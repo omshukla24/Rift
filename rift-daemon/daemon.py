@@ -5,7 +5,7 @@ import json
 import time
 
 async def telemetry_loop(websocket):
-    print("CORTEX UI Connected. Streaming raw telemetry...")
+    print("RIFT UI Connected. Streaming raw telemetry...")
     try:
         # Initialize basic CPU measurement to avoid 0.0 response at start
         psutil.cpu_percent(interval=None)
@@ -28,10 +28,10 @@ async def telemetry_loop(websocket):
             await asyncio.sleep(1/60) # High frequency 60Hz stream
             
     except websockets.exceptions.ConnectionClosed:
-        print("CORTEX UI Connection Severed.")
+        print("RIFT UI Connection Severed.")
 
 async def main():
-    print("Initializing CORTEX Systems Daemon on :8765...")
+    print("Initializing RIFT Systems Daemon on :8765...")
     async with websockets.serve(telemetry_loop, "localhost", 8765):
         await asyncio.Future()  # run forever
 

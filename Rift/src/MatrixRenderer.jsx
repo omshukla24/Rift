@@ -180,7 +180,7 @@ export default function MatrixRenderer({ onTelemetryUpdate, onLog, onIncident, a
     <div className="matrix-wrapper">
        <div className="corner-tl"></div><div className="corner-tr"></div>
        <div className="corner-bl"></div><div className="corner-br"></div>
-       <canvas ref={canvasRef} className="cortex-canvas" />
+       <canvas ref={canvasRef} className="rift-canvas" />
     </div>
   );
 }
