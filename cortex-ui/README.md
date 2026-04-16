@@ -1,16 +1,22 @@
-# React + Vite
+# RIFT
+## Autonomous Cybersecurity Observability & Response Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+RIFT is an enterprise-grade platform designed to visually orchestrate and neutralize cyber threats using the Gemini 2.5 Flash native Multimodal Intelligence ecosystem. 
 
-Currently, two official plugins are available:
+By replacing thousands of lines of generic log-text with a dynamic, physical, 2D layout of your network, RIFT allows security engineering teams to observe active DDoS attacks, SQL Injections, and anomalous payloads, instantly applying DevSecOps resolutions.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Platform Capability Matrix
+- **Omni-Ingest Pipeline**: Native engine capable of parsing raw Github text logs, error screenshots, raw JSON payloads, and unstructured string-based alerts into absolute structured architectural targets using Gemini Multimodal vision execution.
+- **Dynamic ReactFlow Topologies**: Natively hook, assemble, and expand complex cloud architectures (Gateways, S3 Buckets, Cache nodes) by physically dragging elements. The Gemini Agent automatically strings visual architecture into Context JSON, allowing zero-config dynamic scaling.
+- **Chaos Mode Simulator**: An autonomous Red-Team orchestrator built in. Once executed, it simulates high-stress volumetric payloads organically across your deployed infrastructure allowing engineers to observe and tune the AI response logic.
+- **Time-Travel Operations (VCR)**: Captures immutable array states natively, granting DevOps teams the capability to drag an operational scrubber back through time to freeze the physical network configuration directly before, during, or after a compromise.
 
-## React Compiler
+### Tech Stack
+- Frontend: `React 19` + `Vite` + `ReactFlow`
+- Intelligent Routing Framework: `@google/genai` (Native Gemini 2.5 Flash SDK)
+- Structural UI: Custom CSS Light Glassmorphism Architecture (Vercel-Inspired)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Secure By Design
+Deployed securely to Google Cloud App Engine (`app.yaml`). API Keys are securely obfuscated into minified binary chunks during initial `npm build` deployment, restricting raw `.env` payload transmission via strict `.gcloudignore` protocols.
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Built for the LAPLACE / Tech Builders deployment footprint.
