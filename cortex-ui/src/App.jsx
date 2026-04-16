@@ -277,6 +277,19 @@ export default function App() {
   
   const currentGraph = getActiveGraph();
 
+  const handleDeleteNode = useCallback((nodeId) => {
+    if (vcrIndex !== -1) return; // Disallow delete in historical playback
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    saveSnapshot();
+    addLog(`[UI] Removed architecture node: ${nodeId}`, 'ai');
+  }, [vcrIndex, saveSnapshot, addLog]);
+
+  const mapNodes = currentGraph.n.map(n => ({
+      ...n,
+      data: { ...n.data, onDelete: handleDeleteNode }
+  }));
+
   return (
     <div className={`dashboard-layout light-glass ${vcrIndex !== -1 ? 'vcr-mode' : ''}`}>
       <div className="nav-bar glass-panel">
@@ -351,9 +364,13 @@ export default function App() {
                 <div className="panel palette glass-panel">
                   <h2>NODE PALETTE</h2>
                   <div className="palette-desc">Drag to architecture to expand telemetry.</div>
-                  <div className="dndnode input" onDragStart={(event) => onDragStart(event, 'gateway')} draggable>Gateway Node</div>
+                  <div className="dndnode input" onDragStart={(event) => onDragStart(event, 'gateway')} draggable>API Gateway</div>
                   <div className="dndnode" onDragStart={(event) => onDragStart(event, 'worker')} draggable>Worker Instance</div>
                   <div className="dndnode output" onDragStart={(event) => onDragStart(event, 'database')} draggable>Database Storage</div>
+                  <div className="dndnode" onDragStart={(event) => onDragStart(event, 's3-bucket')} draggable>S3 Bucket</div>
+                  <div className="dndnode" onDragStart={(event) => onDragStart(event, 'kafka-queue')} draggable>Kafka Event Queue</div>
+                  <div className="dndnode" onDragStart={(event) => onDragStart(event, 'redis-cache')} draggable>Redis Cache</div>
+                  <div className="dndnode input" onDragStart={(event) => onDragStart(event, 'ui-frontend')} draggable>Web Frontend UI</div>
                 </div>
             </div>
 
@@ -368,7 +385,7 @@ export default function App() {
                       <div className="vcr-badge">● HISTORICAL PLAYBACK (T-{temporalHistory.length - vcrIndex - 1})</div>
                   )}
                   <RiftMap 
-                      nodes={currentGraph.n} 
+                      nodes={mapNodes} 
                       edges={currentGraph.e} 
                       onNodesChange={onNodesChange}
                       onEdgesChange={onEdgesChange}

@@ -3,15 +3,20 @@ import ReactFlow, { Background, Controls, MarkerType } from 'reactflow';
 import 'reactflow/dist/style.css';
 
 // Custom Premium Node
-const RiftNode = memo(({ data }) => {
+const RiftNode = memo(({ data, id }) => {
   const isCritical = data.status === 'critical';
   const isHealthy = data.status === 'healthy';
 
   return (
     <div className={`rift-node ${isCritical ? 'critical' : isHealthy ? 'healthy' : 'idle'}`}>
        <div className="node-header">
-          <div className={`status-dot ${isCritical ? 'pulse-red' : isHealthy ? 'pulse-green' : 'pulse-blue'}`}></div>
-          <span className="node-title">{data.label}</span>
+          <div className="node-header-left">
+             <div className={`status-dot ${isCritical ? 'pulse-red' : isHealthy ? 'pulse-green' : 'pulse-blue'}`}></div>
+             <span className="node-title">{data.label}</span>
+          </div>
+          {data.onDelete && (
+             <button className="node-delete-btn" onClick={() => data.onDelete(id)} title="Remove Node">&times;</button>
+          )}
        </div>
        <div className="node-body">
           <span className="ip">{data.ip}</span>
