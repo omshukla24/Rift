@@ -22,15 +22,15 @@ The overarching pipeline seamlessly integrates high-speed edge telemetry, native
 graph TD
     %% Base Network Infrastructure
     subgraph "Infrastructure Edge"
-        RD[rift-daemon\n(Python Psutil Engine)] -- "Live Streaming Telemetry (WSS)" --> UI
-        RawLogs("Raw Server Logs / Alerts\n(Apache/Nginx/Syslog)") -.-> Ingest
+        RD["rift-daemon<br/>(Python Psutil Engine)"] -- "Live Streaming Telemetry (WSS)" --> UI
+        RawLogs("Raw Server Logs / Alerts<br/>(Apache/Nginx/Syslog)") -.-> Ingest
     end
 
     %% Web Platform
     subgraph "RIFT Core Platform (React + WASM)"
         UI["Visual React Frontend (Vite)"]
-        UI --> Matrix["WASM Matrix Engine\n(High-Perf WebGL Visualizer)"]
-        UI --> RFlow["ReactFlow Topologies\n(Interactive Network Map)"]
+        UI --> Matrix["WASM Matrix Engine<br/>(High-Perf WebGL Visualizer)"]
+        UI --> RFlow["ReactFlow Topologies<br/>(Interactive Network Map)"]
         Ingest["Omni-Ingest Pipeline"] --> UI
     end
 
@@ -43,7 +43,7 @@ graph TD
     %% SecOps Operational Tooling
     subgraph "SecOps Command & Control"
         RFlow --> VCR["Time-Travel (State VCR)"]
-        RFlow --> Sim["Chaos Mode Orchestrator\n(Red-Team Stressing)"]
+        RFlow --> Sim["Chaos Mode Orchestrator<br/>(Red-Team Stressing)"]
     end
 ```
 
