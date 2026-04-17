@@ -435,18 +435,20 @@ export default function App() {
                         {uploadedFileIndicator && <span className="attached-file">{uploadedFileIndicator}</span>}
                      </div>
                      
-                     <div style={{display: 'flex', gap: '0.5rem'}}>
+                     <div style={{display: 'flex', gap: '0.5rem', width: '100%'}}>
                          <button 
                            className={`cmd-btn generic-btn primary-btn ${isProcessing || vcrIndex !== -1 || isChaosMode ? 'disabled' : ''}`} 
+                           style={{ flex: 1, padding: '0.8rem' }}
                            onClick={() => handleIngest()}
                            disabled={isProcessing || vcrIndex !== -1 || isChaosMode}>
-                           {isChaosMode ? 'Chaos Pilot Active' : (isProcessing ? 'Processing Payload...' : 'Send to RIFT Interpreter')}
+                           {isChaosMode ? 'Chaos Active' : (isProcessing ? 'Processing...' : 'Analyze Threat')}
                          </button>
                          <button 
                            onClick={handleVoiceCommand} 
                            className={`cmd-btn generic-btn`} 
-                           style={{flex: '0 0 auto', padding: '0.8rem', background: isListening ? 'var(--accent-red)' : 'transparent', color: isListening ? '#fff' : 'var(--text-primary)', border: '1px solid var(--border-color)'}}
-                           disabled={isProcessing || vcrIndex !== -1 || isChaosMode}>
+                           style={{flex: '0 0 45px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isListening ? 'var(--accent-red)' : 'transparent', color: isListening ? '#fff' : 'var(--text-primary)', border: '1px solid var(--border-color)'}}
+                           disabled={isProcessing || vcrIndex !== -1 || isChaosMode}
+                           title="Voice Command">
                             🎤
                          </button>
                      </div>
