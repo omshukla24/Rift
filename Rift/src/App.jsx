@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import RiftMap from './RiftMap';
 import { parseIncidentPayload, generateAgentResolution } from './lib/gemini';
 import { MarkerType, addEdge, applyNodeChanges, applyEdgeChanges } from 'reactflow';
+import { playAlertBeep, playSuccessChirp } from './lib/audio';
+import jsPDF from 'jspdf';
 
 const initialNodes = [
   { id: 'lb-1', type: 'rift', position: { x: 250, y: 50 }, data: { label: 'US-EAST-LB', ip: '10.0.0.12', type: 'Load Balancer', status: 'healthy' } },
@@ -43,6 +45,8 @@ export default function App() {
   const [uploadedFileIndicator, setUploadedFileIndicator] = useState(null);
   const [imagePayload, setImagePayload] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [theme, setTheme] = useState('light');
+  const [isListening, setIsListening] = useState(false);
   
   // New features state
   const [isChaosMode, setIsChaosMode] = useState(false);
@@ -64,10 +68,25 @@ export default function App() {
   }, [logs, activeTab]);
 
   useEffect(() => {
+    document.body.dataset.theme = theme;
+  }, [theme]);
+
+  useEffect(() => {
     const handleTrigger = () => setShowApiKeyModal(true);
     window.addEventListener('trigger-api-key-modal', handleTrigger);
     return () => window.removeEventListener('trigger-api-key-modal', handleTrigger);
   }, []);
+
+  useEffect(() => {
+    const handleDaemonLog = (e) => {
+        const transcript = `[PYTHON DAEMON INTERCEPT] ${e.detail}`;
+        setIngestText(transcript);
+        // Force asynchronous fire so React state can catch up nicely
+        setTimeout(() => handleIngest(transcript), 100);
+    };
+    window.addEventListener('daemon-log', handleDaemonLog);
+    return () => window.removeEventListener('daemon-log', handleDaemonLog);
+  }, []); // eslint-disable-line
 
   const saveLocalApiKey = () => {
     if (modalInputKey.trim()) {
@@ -172,9 +191,46 @@ export default function App() {
           setUploadedFileIndicator(`Text: ${file.name}`);
           setImagePayload(null);
           const reader = new FileReader();
-          reader.onloadend = () => setIngestText(reader.result);
           reader.readAsText(file);
       }
+  };
+
+  const exportPDF = (patch) => {
+      const doc = new jsPDF();
+      doc.setFont("courier", "bold");
+      doc.setFontSize(22);
+      doc.text("RIFT POST-MORTEM REPORT", 20, 20);
+      doc.setFontSize(12);
+      doc.setFont("courier", "normal");
+      doc.text(`TIMESTAMP:    ${patch.time}`, 20, 40);
+      doc.text(`TARGET NODE:  ${patch.node}`, 20, 50);
+      doc.text(`THREAT VECTOR:${patch.attack}`, 20, 60);
+      doc.text("---------------------------------------------------------", 20, 70);
+      doc.setFont("courier", "bold");
+      doc.text("DEVSECOPS REMEDIATION PATCH:", 20, 80);
+      doc.setFont("courier", "normal");
+      
+      const splitTitle = doc.splitTextToSize(patch.patch, 170);
+      doc.text(splitTitle, 20, 90);
+      doc.save(`RIFT-Incident-${patch.node}-${Date.now()}.pdf`);
+  };
+
+  const handleVoiceCommand = () => {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+          addLog('[SYS] Speech Recognition not supported in this browser.', 'warn');
+          return;
+      }
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.onstart = () => setIsListening(true);
+      recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          setIngestText(transcript);
+          handleIngest(transcript);
+      };
+      recognition.onend = () => setIsListening(false);
+      recognition.start();
   };
 
   const getFinalPayload = async (autoText = null) => {
@@ -242,6 +298,7 @@ export default function App() {
      
      // 2. Topology State update
      setWorkflowState(1);
+     playAlertBeep();
      setNodes(nds => nds.map(node => node.id === targetNodeId ? { ...node, data: { ...node.data, status: 'critical' } } : node));
      setEdges(eds => eds.map(edge => edge.target === targetNodeId || edge.source === targetNodeId ? { ...edge, style: { stroke: '#ef4444', animation: 'dash 1s linear infinite' }, markerEnd: { type: MarkerType.ArrowClosed, color: '#ef4444' } } : edge));
      
@@ -263,6 +320,7 @@ export default function App() {
              setNodes(nds => nds.map(node => node.id === targetNodeId ? { ...node, data: { ...node.data, status: 'healthy' } } : node));
              setEdges(eds => eds.map(edge => edge.target === targetNodeId || edge.source === targetNodeId ? { ...edge, style: { stroke: '#34d399' }, markerEnd: { type: MarkerType.ArrowClosed, color: '#34d399' } } : edge));
              setWorkflowState(3);
+             playSuccessChirp();
              addLog(`[SYS] Automated configuration applied. Pipeline validated.`, 'ai');
              
              saveSnapshot(); // History 2: Resolution applied
@@ -338,6 +396,9 @@ export default function App() {
             <button className={`chaos-btn ${isChaosMode ? 'active' : ''}`} onClick={() => setIsChaosMode(!isChaosMode)}>
                {isChaosMode ? '▇ CHAOS ACTIVE' : '▶ ENABLE CHAOS MODE'}
             </button>
+            <button className="generic-btn dark-toggle-btn" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} style={{marginLeft: '10px', background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '100px', cursor: 'pointer', padding: '6px 14px', fontSize: '11px', fontWeight: 'bold'}}>
+               {theme === 'light' ? '🌙 CYBER-NIGHTS' : '☀️ DAYLIGHT'}
+            </button>
          </div>
          <div className="tabs">
             <button className={activeTab === 'topology' ? 'active' : ''} onClick={() => setActiveTab('topology')}>Architecture</button>
@@ -374,12 +435,21 @@ export default function App() {
                         {uploadedFileIndicator && <span className="attached-file">{uploadedFileIndicator}</span>}
                      </div>
                      
-                     <button 
-                       className={`cmd-btn generic-btn primary-btn ${isProcessing || vcrIndex !== -1 || isChaosMode ? 'disabled' : ''}`} 
-                       onClick={() => handleIngest()}
-                       disabled={isProcessing || vcrIndex !== -1 || isChaosMode}>
-                       {isChaosMode ? 'Chaos Pilot Active' : (isProcessing ? 'Processing Payload...' : 'Send to RIFT Interpreter')}
-                     </button>
+                     <div style={{display: 'flex', gap: '0.5rem'}}>
+                         <button 
+                           className={`cmd-btn generic-btn primary-btn ${isProcessing || vcrIndex !== -1 || isChaosMode ? 'disabled' : ''}`} 
+                           onClick={() => handleIngest()}
+                           disabled={isProcessing || vcrIndex !== -1 || isChaosMode}>
+                           {isChaosMode ? 'Chaos Pilot Active' : (isProcessing ? 'Processing Payload...' : 'Send to RIFT Interpreter')}
+                         </button>
+                         <button 
+                           onClick={handleVoiceCommand} 
+                           className={`cmd-btn generic-btn`} 
+                           style={{flex: '0 0 auto', padding: '0.8rem', background: isListening ? 'var(--accent-red)' : 'transparent', color: isListening ? '#fff' : 'var(--text-primary)', border: '1px solid var(--border-color)'}}
+                           disabled={isProcessing || vcrIndex !== -1 || isChaosMode}>
+                            🎤
+                         </button>
+                     </div>
                   </div>
                   
                   <div className="workflow-tracker">
@@ -496,6 +566,9 @@ export default function App() {
                           </div>
                           <h4>ATTACK VECTOR: {p.attack}</h4>
                           <p className="resolution-text">{p.patch}</p>
+                          <button onClick={() => exportPDF(p)} className="cmd-btn generic-btn" style={{marginTop: '1rem', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)'}}>
+                             EXPORT REPORT TO PDF
+                          </button>
                        </div>
                     ))}
                  </div>

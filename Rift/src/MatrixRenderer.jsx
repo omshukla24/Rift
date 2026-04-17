@@ -19,8 +19,12 @@ export default function MatrixRenderer({ onTelemetryUpdate, onLog, onIncident, a
     let currentTelem = { cpu: 0, mem: 0, sys_entropy: 0 };
     ws.onmessage = (e) => {
       let data = JSON.parse(e.data);
-      currentTelem = data;
-      onTelemetryUpdate(data);
+      if (data.type === 'log_event') {
+          window.dispatchEvent(new CustomEvent('daemon-log', { detail: data.payload }));
+      } else {
+          currentTelem = data;
+          onTelemetryUpdate(data);
+      }
     };
 
     let gl;

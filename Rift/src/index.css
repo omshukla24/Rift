@@ -16,6 +16,18 @@
   --accent-green: #00A96B;
 }
 
+[data-theme='dark'] {
+  --bg-color: #0A0A0A;
+  --text-primary: #E5E7EB;
+  --text-secondary: #94A3B8;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(15, 23, 42, 0.5);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --accent-blue: #38BDF8;
+  --accent-red: #EF4444;
+  --accent-green: #34D399;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -98,9 +110,9 @@ body {
 
 .tabs button.active {
   color: var(--text-primary);
-  background: #FFFFFF;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  border: 1px solid rgba(0,0,0,0.05);
+  background: var(--bg-color);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  border: 1px solid var(--border-color);
 }
 
 /* MAIN ARCHITECTURE */
@@ -150,7 +162,7 @@ body {
 /* INGEST UI */
 .ingest-box {
   width: 100%;
-  background: #FFFFFF;
+  background: transparent;
   border: 1px solid rgba(0,0,0,0.1);
   border-radius: 8px;
   padding: 1rem;
@@ -170,7 +182,7 @@ body {
 }
 
 .ingest-box:disabled {
-  background: #FAFAFA;
+  background: var(--border-color);
   color: var(--text-secondary);
   cursor: not-allowed;
 }
@@ -239,7 +251,7 @@ body {
 
 .primary-btn {
   background-color: var(--text-primary);
-  color: #FFFFFF;
+  color: var(--bg-color);
 }
 
 .primary-btn:hover {
@@ -307,7 +319,7 @@ body {
 .steps li.active .checkbox {
   border-color: var(--text-primary);
   background: var(--text-primary);
-  color: #FFFFFF;
+  color: var(--bg-color);
 }
 
 .steps li.active.ai .checkbox { background: var(--accent-blue); border-color: var(--accent-blue); }
@@ -400,7 +412,7 @@ body {
 
 /* RIFT NODE - WHITE GLASS */
 .rift-node {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
   border: 1px solid var(--border-color);
   border-radius: 8px;
