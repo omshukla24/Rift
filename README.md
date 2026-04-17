@@ -427,10 +427,7 @@ Rift/
 
 <br/>
 
-**Built for the Google Tech Builders Program**
-
-<br/>
-
+[![MIT License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
 [![Deploy](https://img.shields.io/badge/Deployed_on-Google_Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)](https://rift-493520.uc.r.appspot.com)
 [![Gemini](https://img.shields.io/badge/Powered_by-Gemini_2.5_Flash-6366f1?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev)
 
