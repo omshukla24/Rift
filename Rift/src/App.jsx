@@ -47,6 +47,7 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [theme, setTheme] = useState('light');
   const [isListening, setIsListening] = useState(false);
+  const [aiChatLogs, setAiChatLogs] = useState([{ speaker: 'Gemini', text: "RIFT Voice Architecture Online. I am listening directly to your binary audio. What are your orders, commander?" }]);
   
   // New features state
   const [isChaosMode, setIsChaosMode] = useState(false);
@@ -56,6 +57,8 @@ export default function App() {
 
   const logsEndRef = useRef(null);
   const reactFlowWrapper = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   const addLog = useCallback((msg, type = '') => {
     setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), msg, type }]);
@@ -215,22 +218,45 @@ export default function App() {
       doc.save(`RIFT-Incident-${patch.node}-${Date.now()}.pdf`);
   };
 
-  const handleVoiceCommand = () => {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-          addLog('[SYS] Speech Recognition not supported in this browser.', 'warn');
+  const handleVoiceCommand = async () => {
+      if (isListening) {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+              mediaRecorderRef.current.stop();
+          }
+          setIsListening(false);
           return;
       }
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.onstart = () => setIsListening(true);
-      recognition.onresult = (event) => {
-          const transcript = event.results[0][0].transcript;
-          setIngestText(transcript);
-          handleIngest(transcript);
-      };
-      recognition.onend = () => setIsListening(false);
-      recognition.start();
+
+      try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+          mediaRecorderRef.current = mediaRecorder;
+          audioChunksRef.current = [];
+
+          mediaRecorder.ondataavailable = (event) => {
+              if (event.data.size > 0) audioChunksRef.current.push(event.data);
+          };
+
+          mediaRecorder.onstop = () => {
+              const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+              const reader = new FileReader();
+              reader.readAsDataURL(audioBlob);
+              reader.onloadend = () => {
+                  const base64Audio = reader.result.split(',')[1];
+                  const explicitPayload = { type: 'audio', mimeType: 'audio/webm', content: base64Audio };
+                  // Free microphone stream tracks
+                  stream.getTracks().forEach(track => track.stop());
+                  handleIngest(null, explicitPayload);
+              };
+          };
+
+          mediaRecorder.start();
+          setIsListening(true);
+          addLog('[SYS] Listening to native audio. Speak threat vector, then tap mic again to transmit...', 'ai');
+      } catch (err) {
+          addLog('[WARN] Error accessing microphone for native audio.', 'warn');
+          setIsListening(false);
+      }
   };
 
   const getFinalPayload = async (autoText = null) => {
@@ -274,19 +300,29 @@ export default function App() {
       }, 30);
   };
 
-  const handleIngest = async (autoText = null) => {
-     if ((!ingestText.trim() && !autoText) && !imagePayload) return;
+  const handleIngest = async (autoText = null, explicitPayload = null) => {
+     if ((!ingestText.trim() && !autoText) && !imagePayload && !explicitPayload) return;
      if (isProcessing) return;
      
      setIsProcessing(true);
      setWorkflowState(0);
+
+     const payloadObj = explicitPayload || await getFinalPayload(autoText);
      addLog(`[AGENT_ROUTER] Initiating AI Payload Ingestion...`, 'ai');
      saveSnapshot(); // History 1: Before attack
      
-     const finalPayload = await getFinalPayload(autoText);
-     
      // Passes current custom `nodes` so AI knows what architecture exists!
-     const analysis = await parseIncidentPayload(finalPayload, nodes);
+     let analysis;
+     try {
+         analysis = await parseIncidentPayload(payloadObj, nodes);
+         if (analysis.chat_response) {
+            setAiChatLogs(prev => [...prev, { speaker: 'User', text: explicitPayload?.type === 'audio' ? '[ Audio Recording Transmitted ]' : (autoText || ingestText || '[ Image Analyzed ]') }]);
+            setAiChatLogs(prev => [...prev, { speaker: 'Gemini', text: analysis.chat_response }]);
+            setActiveTab('chat');
+         }
+     } catch(e) {
+         analysis = { target: nodes[0]?.id || 'lb-1', type: 'Unclassified Error' };
+     }
      const targetNodeId = analysis.target || (nodes[0]?.id || 'lb-1'); 
      const attackName = analysis.type || 'Custom Payload Signature';
      
@@ -402,6 +438,7 @@ export default function App() {
          </div>
          <div className="tabs">
             <button className={activeTab === 'topology' ? 'active' : ''} onClick={() => setActiveTab('topology')}>Architecture</button>
+            <button className={activeTab === 'chat' ? 'active' : ''} onClick={() => setActiveTab('chat')}>AI Comm-Link</button>
             <button className={activeTab === 'logs' ? 'active' : ''} onClick={() => setActiveTab('logs')}>Threat Logs ({logs.length})</button>
             <button className={activeTab === 'patches' ? 'active' : ''} onClick={() => setActiveTab('patches')}>Resolution Registry ({patches.length})</button>
          </div>
@@ -574,6 +611,25 @@ export default function App() {
                     ))}
                  </div>
                )}
+           </div>
+        )}
+
+        {activeTab === 'chat' && (
+           <div className="panel full-page glass-panel">
+              <h2>COMM-LINK SECURE CHANNEL</h2>
+              <div className="terminal-window" style={{ overflowY: 'auto', maxHeight: '70vh' }}>
+                 <div className="terminal-content">
+                    {aiChatLogs.map((msg, i) => (
+                       <div key={i} style={{ marginBottom: '1.2rem', padding: '1rem', background: 'rgba(0,0,0,0.15)', borderRadius: '4px', borderLeft: `3px solid ${msg.speaker === 'User' ? 'var(--accent-blue)' : 'var(--accent-green)'}` }}>
+                          <strong style={{ display: 'block', marginBottom: '0.4rem', color: msg.speaker === 'User' ? 'var(--accent-blue)' : 'var(--accent-green)', fontSize: '0.85rem', letterSpacing: '1px' }}>
+                             {msg.speaker.toUpperCase()}
+                          </strong> 
+                          <span style={{ color: 'var(--text-primary)', lineHeight: '1.5' }}>{msg.text}</span>
+                       </div>
+                    ))}
+                    <div ref={logsEndRef} />
+                 </div>
+              </div>
            </div>
         )}
       </div>

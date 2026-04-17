@@ -33,7 +33,17 @@ You can ONLY choose from these LIVE Node IDs currently in the user's infrastruct
 ${availableNodesString}
 
 Return ONLY a raw, perfectly formatted JSON object with no markdown wrappers containing:
-{ "target": "node-id-here", "type": "A specific 2-4 word description of the issue seen in the image" }` },
+{ "target": "node-id-here", "type": "A specific 2-4 word description of the issue seen in the image", "chat_response": "A highly conversational, slightly cyber-themed 1-2 sentence response speaking directly to the user addressing the incident." }` },
+               { inlineData: { mimeType: payload.mimeType, data: payload.content } }
+           ];
+        } else if (payload.type === 'audio') {
+           contentsData = [
+               { text: `You are an autonomous AI cyber-commander. Listen strictly to the user's audio command or threat dictation. You must explicitly determine which architectural node they are targeting.
+You can ONLY choose from these LIVE Node IDs currently in the user's infrastructure:
+${availableNodesString}
+
+Return ONLY a raw, perfectly formatted JSON object with no markdown wrappers containing:
+{ "target": "node-id-here", "type": "A specific 2-4 word description derived from their voice command", "chat_response": "A highly conversational, slightly cyber-themed 1-2 sentence response speaking directly to the user addressing their voice command directly." }` },
                { inlineData: { mimeType: payload.mimeType, data: payload.content } }
            ];
         } else {
@@ -46,7 +56,7 @@ You can ONLY choose from these LIVE Node IDs currently in the user's infrastruct
 ${availableNodesString}
 
 Return ONLY a raw, perfectly formatted JSON object with no markdown wrappers containing:
-{ "target": "node-id-here", "type": "A very short, 2-to-4 word description of what the attack/error appears to be" }`;
+{ "target": "node-id-here", "type": "A very short, 2-to-4 word description of what the attack/error appears to be", "chat_response": "A highly conversational, slightly cyber-themed 1-2 sentence response speaking directly to the user addressing their text ingestion." }`;
         }
 
         const response = await ai.models.generateContent({
