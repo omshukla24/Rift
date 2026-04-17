@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "gcp-build": "",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -12,14 +13,15 @@
     "asbuild:release": "asc assembly/index.ts --target release",
     "asbuild": "npm run asbuild:debug && npm run asbuild:release",
     "test": "node --test",
-    "start": "npx serve ."
+    "start": "serve -s dist"
   },
   "dependencies": {
     "@google/genai": "^1.50.1",
     "assemblyscript": "^0.28.14",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "reactflow": "^11.11.4"
+    "reactflow": "^11.11.4",
+    "serve": "^14.2.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

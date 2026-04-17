@@ -1,0 +1,10 @@
+.git
+.gitignore
+node_modules/
+src/
+public/
+README.md
+.env
+.env.*
+eslint.config.js
+vite.config.js

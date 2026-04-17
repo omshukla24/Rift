@@ -36,6 +36,9 @@ export default function App() {
   const [edges, setEdges] = useState(initialEdges);
   const [workflowState, setWorkflowState] = useState(0); 
 
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [modalInputKey, setModalInputKey] = useState("");
+
   const [ingestText, setIngestText] = useState("");
   const [uploadedFileIndicator, setUploadedFileIndicator] = useState(null);
   const [imagePayload, setImagePayload] = useState(null);
@@ -59,6 +62,20 @@ export default function App() {
        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs, activeTab]);
+
+  useEffect(() => {
+    const handleTrigger = () => setShowApiKeyModal(true);
+    window.addEventListener('trigger-api-key-modal', handleTrigger);
+    return () => window.removeEventListener('trigger-api-key-modal', handleTrigger);
+  }, []);
+
+  const saveLocalApiKey = () => {
+    if (modalInputKey.trim()) {
+      localStorage.setItem('rift_api_key', modalInputKey.trim());
+      setShowApiKeyModal(false);
+      addLog('[SYS] Personal API Key injected into local browser storage.', 'sys');
+    }
+  };
 
   // Snapshot History Hook
   const saveSnapshot = useCallback(() => {
@@ -292,6 +309,29 @@ export default function App() {
 
   return (
     <div className={`dashboard-layout light-glass ${vcrIndex !== -1 ? 'vcr-mode' : ''}`}>
+      {showApiKeyModal && (
+        <div className="modal-overlay glass-panel" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+           <div className="panel glass-panel" style={{ width: '450px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(15, 23, 42, 0.95)', border: '1px solid #334155' }}>
+              <h2 style={{ margin: 0, color: '#38bdf8' }}>Custom AI Authorization Required</h2>
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                 The edge deployment API quotas have been exhausted or an unclassified error occurred. <br/><br/>
+                 Please provide your personal <b>Gemini API Key</b> to seamlessly resume operations. Your key is stored strictly within your browser's local sandbox layer and is naturally obfuscated.
+              </p>
+              <input 
+                 type="password" 
+                 value={modalInputKey} 
+                 onChange={e => setModalInputKey(e.target.value)} 
+                 placeholder="AIzaSyB..." 
+                 className="ingest-box" 
+                 style={{ height: '40px', background: 'rgba(0,0,0,0.3)', border: '1px solid #475569', color: '#fff', padding: '0 1rem' }} 
+              />
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                  <button onClick={saveLocalApiKey} className="cmd-btn generic-btn primary-btn" style={{ flex: 1 }}>SAVE LOCALLY</button>
+                  <button onClick={() => setShowApiKeyModal(false)} className="cmd-btn generic-btn" style={{ flex: 1 }}>BYPASS</button>
+              </div>
+           </div>
+        </div>
+      )}
       <div className="nav-bar glass-panel">
          <h1 className="logo">R I F T <span>&#x25B2;</span></h1>
          <div className="center-actions">

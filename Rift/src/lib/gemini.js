@@ -1,14 +1,23 @@
 import { GoogleGenAI } from '@google/genai';
 
-let ai;
-if (import.meta.env.VITE_GEMINI_API_KEY && import.meta.env.VITE_GEMINI_API_KEY !== 'YOUR_API_KEY_HERE') {
-    ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+function getAI() {
+    let keyString = localStorage.getItem('rift_api_key');
+    if (!keyString && import.meta.env.VITE_GEMINI_API_KEY && import.meta.env.VITE_GEMINI_API_KEY !== 'YOUR_API_KEY_HERE') {
+        keyString = import.meta.env.VITE_GEMINI_API_KEY;
+    }
+    if (keyString) {
+        return new GoogleGenAI({ apiKey: keyString });
+    }
+    return null;
 }
 
 export async function parseIncidentPayload(payload, liveNodes = []) {
     const defaultNodeId = liveNodes.length > 0 ? liveNodes[0].id : 'lb-1';
 
+    const ai = getAI();
+
     if (!ai) {
+        window.dispatchEvent(new Event('trigger-api-key-modal'));
         return { target: defaultNodeId, type: 'Unclassified HTTP Vector (API Key Missing)' };
     }
 
@@ -53,12 +62,17 @@ Return ONLY a raw, perfectly formatted JSON object with no markdown wrappers con
         return JSON.parse(text);
     } catch(e) {
         console.error(e);
+        window.dispatchEvent(new Event('trigger-api-key-modal'));
         return { target: defaultNodeId, type: 'Unclassified Intake Overload' };
     }
 }
 
 export async function generateAgentResolution(nodeName, attackType) {
-    if (!ai) return "Deterministic fallback activated: Deployed generic WAF dropping malicious packets.";
+    const ai = getAI();
+    if (!ai) {
+        window.dispatchEvent(new Event('trigger-api-key-modal'));
+        return "Deterministic fallback activated: Please configure your API Key.";
+    }
     
     try {
         const response = await ai.models.generateContent({
@@ -67,6 +81,12 @@ export async function generateAgentResolution(nodeName, attackType) {
         });
         return response.text;
     } catch(e) {
-        return "DevSecOps AI Generation failed. Applying deterministic edge-layer firewall blocks to preserve infrastructure.";
+        window.dispatchEvent(new Event('trigger-api-key-modal'));
+        return "DevSecOps AI Generation failed. API Key error or infrastructure overload.";
     }
+}
+
+export async function requestAntibodyPath(anomalies) {
+    // Return a dummy strike coordinate for the matrix renderer
+    return { strikeX: 128, strikeY: 128 };
 }

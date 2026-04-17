@@ -1,0 +1,23 @@
+runtime: nodejs20
+env: standard
+
+handlers:
+  - url: /assets
+    static_dir: dist/assets
+    secure: always
+
+  - url: /(.*\.wasm)$
+    static_files: dist/\1
+    upload: dist/.*\.wasm$
+    mime_type: application/wasm
+    secure: always
+
+  - url: /(.*\.(svg|ico|png|jpg))$
+    static_files: dist/\1
+    upload: dist/.*\.(svg|ico|png|jpg)$
+    secure: always
+
+  - url: /.*
+    static_files: dist/index.html
+    upload: dist/index.html
+    secure: always
