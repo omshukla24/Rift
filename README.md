@@ -159,44 +159,8 @@ Feed RIFT data through **5 different input channels** — all routed through the
 | **🛠️ Resolution Engineer** | Generates hyper-specific DevSecOps remediation patches | Node name + attack vector | Technical remediation text |
 | **💬 General Chat** | Powers both AEGIS voice and RIFT AI Assist text chat | User message + architecture context | Conversational response |
 
-<br/>
 
-### 🔵 AEGIS — Hands-Free Voice AI
 
-AEGIS is a standalone voice conversation system — like talking to another human. No buttons per turn. No clicking. **Just talk.**
-
-<table>
-<tr>
-<td width="55%">
-
-**How It Works**
-1. **Tap the orb once** → enters conversation mode
-2. **Voice Activity Detection** monitors your mic at 100ms intervals via Web Audio API
-3. **When you speak** → AEGIS detects audio above threshold
-4. **When you stop** → 1.5s of silence → auto-transmits to Gemini
-5. **AEGIS responds** via Text-to-Speech (British English voice)
-6. **Auto-resumes listening** after speaking — no clicks needed
-7. **Interrupt anytime** — speak while AEGIS talks and it cancels instantly
-8. **Tap again** → ends conversation
-
-</td>
-<td width="45%">
-
-**Dynamic Visual States**
-
-| State | Orb | Label |
-|---|---|---|
-| Idle | 🔵 Blue gradient | `AEGIS` |
-| Listening | 🔴 Red pulsing rings | `LISTENING...` |
-| Processing | 🟡 Amber spinning ring | `THINKING...` |
-| Speaking | 🟢 Green breathing glow | `SPEAKING...` |
-| Active | 🟣 Indigo glow | `TAP TO END` |
-
-</td>
-</tr>
-</table>
-
-<br/>
 
 ### 💬 RIFT AI Assist — Text Chat
 
