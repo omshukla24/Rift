@@ -1,141 +1,151 @@
 <div align="center">
-  <h1>🌌 RIFT</h1>
-  <p><strong>Autonomous Cybersecurity Observability & Response Platform</strong></p>
-  <p><i>Powered by Google Gemini 2.5 Flash Native Multimodal Intelligence</i></p>
+  <h1>🌌 R I F T ▲</h1>
+  <p><strong>Real-time Infrastructure Fault Topology</strong></p>
+  <p><i>AI-Powered Network Observability & Autonomous Threat Remediation</i></p>
+  <p><i>Powered by Google Gemini 2.5 Flash</i></p>
+  <br/>
+  <a href="https://rift-493520.uc.r.appspot.com"><strong>🔗 Live Demo →</strong></a>
 </div>
 
 <br/>
 
 ## 📖 Overview
 
-RIFT is a high-performance, enterprise-grade cybersecurity platform built to fundamentally change how DevSecOps engineering teams interact with network topography and cyber-threats. 
+RIFT is an AI-driven, real-time network observability command center that lets engineers visualize their entire cloud infrastructure as an interactive topology graph, feed it raw threat data — text, images, code, voice commands, or GitHub links — and watch an autonomous AI agent identify, attack-map, and self-remediate vulnerabilities directly on the graph.
 
-Instead of forcing engineers to scan through thousands of lines of generic log-text to isolate anomalies, RIFT provides a physical, interactive, 2D WebGL-based visualization of your network topology. It allows teams to actively observe system entropy, DDoS attacks, SQL Injections, and anomalous cluster payloads as they happen in real time, leveraging advanced Generative AI to apply dynamic, instantaneous mitigation workflows.
+Instead of drowning in logs and Slack alerts, RIFT provides a physical, interactive visualization of your network topology with AI-powered autonomous threat resolution.
 
 ---
 
 ## 🏗 System Architecture
 
-The overarching pipeline seamlessly integrates high-speed edge telemetry, native browser visualization elements (WASM / WebGL), and powerful LLM context routing to synthesize massive volumes of security data.
-
 ```mermaid
 graph TD
-    %% Base Network Infrastructure
-    subgraph "Infrastructure Edge"
-        RD["rift-daemon<br/>(Python Psutil Engine)"] -- "Live Streaming Telemetry (WSS)" --> UI
-        RawLogs("Raw Server Logs / Alerts<br/>(Apache/Nginx/Syslog)") -.-> Ingest
+    %% Data Ingestion
+    subgraph "Multimodal Ingestion"
+        Text["Raw Text / Logs"] --> Ingest
+        Image["Screenshots / Diagrams"] --> Ingest
+        Audio["Voice Commands (AEGIS)"] --> Ingest
+        GH["GitHub Link Auto-Fetch"] --> Ingest
+        File["File Upload (.log/.json)"] --> Ingest
+        Ingest["Omni-Ingest Pipeline"]
     end
 
-    %% Web Platform
-    subgraph "RIFT Core Platform (React + WASM)"
-        UI["Visual React Frontend (Vite)"]
-        UI --> Matrix["WASM Matrix Engine<br/>(High-Perf WebGL Visualizer)"]
-        UI --> RFlow["ReactFlow Topologies<br/>(Interactive Network Map)"]
-        Ingest["Omni-Ingest Pipeline"] --> UI
+    %% Core Platform
+    subgraph "RIFT Core Platform (React 19 + Vite)"
+        Ingest --> UI["Visual React Frontend"]
+        UI --> Matrix["WASM Matrix Engine<br/>(WebGL Visualizer)"]
+        UI --> RFlow["ReactFlow Topology<br/>(Interactive Network Map)"]
     end
 
-    %% Intelligence Engine
-    subgraph "Multimodal Intelligence"
-        UI -- "Context JSON / Screenshots / Traces" --> Gem["Gemini 2.5 Flash (SDK)"]
-        Gem -- "Threat Resolutions & Architecture Expansions" --> UI
+    %% Intelligence
+    subgraph "Gemini AI Agents"
+        UI -- "Payload + Live Nodes" --> Agent1["Intake Router<br/>(Attack Mapping)"]
+        Agent1 -- "Target Node + Vector" --> Agent2["Resolution Engineer<br/>(DevSecOps Patch)"]
+        UI -- "Audio / Text" --> Agent3["AEGIS Voice / RIFT Chat<br/>(Conversational AI)"]
     end
 
-    %% SecOps Operational Tooling
+    %% Operations
     subgraph "SecOps Command & Control"
-        RFlow --> VCR["Time-Travel (State VCR)"]
-        RFlow --> Sim["Chaos Mode Orchestrator<br/>(Red-Team Stressing)"]
+        RFlow --> VCR["Temporal VCR<br/>(History Playback)"]
+        RFlow --> Sim["Chaos Mode<br/>(Auto Attack Simulator)"]
+        Agent2 --> Registry["Resolution Registry<br/>(+ PDF Export)"]
     end
 ```
 
 ---
 
-## ✨ Platform Capability Matrix
+## ✨ Features
 
-RIFT replaces obsolete security dashboards with five core architectural pillars:
+### 1. Interactive Architecture Topology
+Drag-and-drop 7 node types (API Gateway, Database, Cache, Kafka, S3, Worker, Frontend) onto an editable ReactFlow graph. Draw edges between nodes. The AI sees every node you add in real-time.
 
-### 1. Omni-Ingest Pipeline
-A truly multimodal ingestion engine capable of natively parsing raw text logs, screenshot images of errors, raw JSON payload streams, and unstructured human alerts. All of this unstructured ambient data is mapped structurally using *Gemini Multimodal Vision* capabilities, creating absolute architectural targets for mitigation within seconds.
+### 2. Multimodal AI Ingestion (5 Modalities)
+Feed RIFT data through text, image screenshots, voice audio, file uploads, or GitHub links — all routed through the same Gemini-powered intake pipeline.
 
-### 2. The WASM Matrix Engine
-Written locally in **AssemblyScript**, this engine streams entropy and hardware states down to the exact WebGL pixel. An interactive, high-bandwidth grid representation reveals load distributions, node corruptions, and threat vectors entirely client-side without bogging down JavaScript heap.
+### 3. Autonomous Attack-Map & Self-Heal
+The AI identifies the exact target node, turns it red on the graph, generates a DevSecOps remediation patch, applies it visually, and turns the node green — all autonomously within seconds.
 
-### 3. Dynamic ReactFlow Topologies
-Natively hook, assemble, and expand complex cloud architectures (API Gateways, internal S3 buckets, cache/Redis nodes) physically by dragging visual elements. When networks evolve, the Gemini Agent automatically strings visual edge architecture into standard *Context JSON*, allowing purely zero-config dynamic application scaling.
+### 4. AEGIS — Hands-Free Voice Conversation
+A standalone voice AI assistant with Voice Activity Detection (VAD). Tap once to enter conversation mode — no buttons per turn. Speak naturally, AEGIS auto-detects silence, transmits, responds via TTS, and auto-resumes listening. Fully interruptible mid-sentence.
 
-### 4. Chaos Mode Simulator
-Why wait for an attack? Chaos Mode serves as an autonomous **Red-Team Orchestrator** structurally integrated into RIFT. When fired, it generates high-stress volumetric payloads organically across your deployed simulated infrastructure, allowing engineers to benchmark, observe, and tune AI response methodologies.
+### 5. RIFT AI Assist — Text Chat Widget
+A separate floating glassmorphic chat widget for text-based Q&A about your infrastructure, threats, and architecture.
 
-### 5. Time-Travel Operations (VCR)
-Security events are fleeting. RIFT’s State VCR continuously checkpoints your network matrix. In the event of a breach, DevOps teams can grab an operational scrubber on the UI and literally **drag time backwards** to freeze the exact physical network configuration the second *before, during,* or *after* a topological compromise.
+### 6. Chaos Mode — Red Team Simulator
+Auto-fires randomized attack payloads (DDoS, SQL Injection, OOM, JWT abuse) every 12 seconds through the full AI pipeline.
 
----
+### 7. Temporal VCR — History Replay
+Scrub backwards through every attack and resolution, replaying the exact graph state at any moment. Write-protected during playback.
 
-## 🛠 Tech Stack Details
-
-The system is structurally organized into a highly optimized Edge UI and an autonomous host-bound Daemon telemetry system:
-
-- **Frontend Application Core**: `React 19` + `Vite` for high-throughput component routing.
-- **Node Topology Visuals**: `ReactFlow` for structural UI mapping.
-- **Intelligent Routing Framework**: `@google/genai` (SDK targeting Gemini 2.5 Flash).
-- **Physical Visuals & Compute Layer**: Custom `AssemblyScript` WebAssembly (WASM) Matrix Renderer compiled down directly to low-level execution context inside `WebGL`.
-- **Host Emulation Daemon**: `Python 3` + `websockets` + `psutil` (Streams baseline Linux/Windows system telemetry locally overriding generic logging).
-- **Aesthetic**: Custom CSS Light Glassmorphism Architecture drawing extensive Vercel-inspired design patterns.
+### 8. Resolution Registry & PDF Export
+Every AI-generated remediation is permanently logged. Export any patch as a formal "RIFT POST-MORTEM REPORT" PDF.
 
 ---
 
-## 🚀 Installation & Local Setup
+## 🛠 Tech Stack
 
-Running RIFT requires launching both the internal telemetry Daemon and the React Client to achieve full operational connectivity.
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 19 + Vite 8 |
+| **Graph Engine** | ReactFlow v11 |
+| **AI** | Google Gemini 2.5 Flash (`@google/genai`) |
+| **Voice Capture** | MediaRecorder API (audio/webm) |
+| **Voice Detection** | Web Audio API (AudioContext + AnalyserNode) |
+| **Text-to-Speech** | SpeechSynthesis API |
+| **Visualization** | WebAssembly (AssemblyScript) + WebGL |
+| **PDF Generation** | jsPDF |
+| **Audio Feedback** | Web Audio API (OscillatorNode) |
+| **Hosting** | Google Cloud App Engine |
+| **Styling** | CSS3 with Glassmorphism, Light/Dark themes |
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 - **Node.js**: `v18+`
-- **Python**: `3.10+`
-- **Google API Key**: Generated via Google AI Studio
+- **Google API Key**: From [Google AI Studio](https://aistudio.google.com)
 
-### 1. Setting Up the Host Daemon (rift-daemon)
-This lightweight Python script reads entropy, CPU consumption, and running processes directly from your physical hardware to breathe life into the Matrix renderer.
-
-```bash
-cd rift-daemon
-pip install websockets psutil
-python daemon.py
-```
-*You should notice the `RIFT UI` awaiting connection on `localhost:8765`.*
-
-### 2. Setting up the RIFT Client
-In a new terminal window at the project root, navigate to the Web application.
+### Setup
 
 ```bash
 cd Rift
 npm install
 ```
 
-Configure your local `.env` inside the `Rift` directory:
+Configure your API key (or enter it in the browser UI):
 ```bash
-echo "VITE_GEMINI_API_KEY=your_gemini_api_key_here" > .env
+echo "VITE_GEMINI_API_KEY=your_key_here" > .env
 ```
 
-Ensure the WASM file is compiled correctly:
+Build WASM and start:
 ```bash
 npm run asbuild
-```
-
-Start the frontend application:
-```bash
 npm run dev
 ```
 
-Visit `http://localhost:5173` and watch the RIFT UI securely bind to the local daemon telemetry!
+Visit `http://localhost:5173`
 
 ---
 
-## 🔒 Secure By Design
+## 🔒 Security
 
-RIFT is rigorously engineered for the LAPLACE / Tech Builders deployment footprint on Google Cloud App Engine:
+- **BYOK (Bring Your Own Key)** — API keys stored in `localStorage` only, never transmitted to any backend
+- Keys are fully client-side — no server, no middleware, no credential exposure
+- `.gcloudignore` ensures `.env` files never deploy to production
+- HTTP 429 quota errors handled gracefully without modal loops
 
-- Deployed securely utilizing strict `app.yaml` directives.
-- Application configurations and active API Keys are strongly obfuscated into minified binary chunks during initial `npm build` deployment. 
-- Strict `.gcloudignore` protocols guarantee local Development `.env` payloads are never permitted to bleed into the external deployment environment.
+---
+
+## 🌐 Deployment
+
+Deployed on **Google Cloud App Engine**: [https://rift-493520.uc.r.appspot.com](https://rift-493520.uc.r.appspot.com)
+
+```bash
+npm run build
+gcloud app deploy --quiet
+```
 
 ---
 

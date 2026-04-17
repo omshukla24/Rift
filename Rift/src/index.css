@@ -751,3 +751,93 @@ body {
   word-wrap: break-word;
   line-height: 1.6;
 }
+
+/* ══════════════════════════════════════════════════ */
+/* AEGIS — Voice Command Orb Animations              */
+/* ══════════════════════════════════════════════════ */
+.aegis-voice-orb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aegis-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Listening — concentric expanding pulse rings */
+.aegis-ring-1 {
+  width: 56px; height: 56px;
+  border: 2px solid rgba(239, 68, 68, 0.6);
+  animation: aegisPulse 1.6s ease-out infinite;
+}
+.aegis-ring-2 {
+  width: 56px; height: 56px;
+  border: 2px solid rgba(239, 68, 68, 0.4);
+  animation: aegisPulse 1.6s ease-out 0.4s infinite;
+}
+.aegis-ring-3 {
+  width: 56px; height: 56px;
+  border: 2px solid rgba(239, 68, 68, 0.2);
+  animation: aegisPulse 1.6s ease-out 0.8s infinite;
+}
+
+@keyframes aegisPulse {
+  0% {
+    width: 56px; height: 56px;
+    opacity: 1;
+  }
+  100% {
+    width: 120px; height: 120px;
+    opacity: 0;
+  }
+}
+
+/* Processing — spinning ring */
+.aegis-ring-processing {
+  width: 72px; height: 72px;
+  border: 3px solid transparent;
+  border-top: 3px solid #f59e0b;
+  border-right: 3px solid #eab308;
+  animation: aegisSpin 0.8s linear infinite;
+}
+
+@keyframes aegisSpin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Speaking — gentle breathing glow */
+.aegis-ring-speaking-1 {
+  width: 56px; height: 56px;
+  border: 2px solid rgba(34, 197, 94, 0.5);
+  animation: aegisBreathe 1.2s ease-in-out infinite;
+}
+.aegis-ring-speaking-2 {
+  width: 56px; height: 56px;
+  border: 2px solid rgba(34, 197, 94, 0.3);
+  animation: aegisBreathe 1.2s ease-in-out 0.3s infinite;
+}
+
+@keyframes aegisBreathe {
+  0%, 100% {
+    width: 56px; height: 56px;
+    opacity: 0.8;
+  }
+  50% {
+    width: 80px; height: 80px;
+    opacity: 0.2;
+  }
+}
+
+/* Chat FAB hover */
+.chat-fab:hover {
+  transform: scale(1.08);
+  transition: transform 0.2s ease;
+}

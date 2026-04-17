@@ -71,9 +71,47 @@ Return ONLY a raw, perfectly formatted JSON object with no markdown wrappers con
         }
         return JSON.parse(text);
     } catch(e) {
-        console.error(e);
+        console.error("Gemini API Error:", e);
+        if (e.message && (e.message.includes('429') || e.message.toLowerCase().includes('quota'))) {
+            return { target: defaultNodeId, type: 'API Quota Exhausted', chat_response: 'It seems our communication uplink is temporarily overloaded by API quota exhaustion. Please standby or rotate your security key.' };
+        }
         window.dispatchEvent(new Event('trigger-api-key-modal'));
-        return { target: defaultNodeId, type: 'Unclassified Intake Overload' };
+        return { target: defaultNodeId, type: 'Unclassified Intake Overload', chat_response: 'I encountered an unclassified telemetry disruption.' };
+    }
+}
+
+export async function handleGeneralChat(payload, liveNodes = []) {
+    const ai = getAI();
+    if (!ai) {
+        window.dispatchEvent(new Event('trigger-api-key-modal'));
+        return "I am currently disconnected. Please configure an API Key so we can communicate.";
+    }
+
+    const availableNodesString = liveNodes.map(n => `- "${n.id}" (${n.data?.label} / ${n.data?.type})`).join('\n');
+
+    try {
+        let contentsData;
+        if (payload.type === 'audio') {
+            contentsData = [
+                { text: `You are AEGIS, a voice-activated AI assistant embedded in the RIFT network observability platform. Listen to the user's audio and respond helpfully. Here is the current live architecture context: \n${availableNodesString}\n\nRespond directly in 1-3 concise spoken sentences. No JSON. No markdown. Pure conversational text. Never refer to yourself as JARVIS.` },
+                { inlineData: { mimeType: payload.mimeType, data: payload.content } }
+            ];
+        } else {
+            contentsData = `You are RIFT AI Assist, a helpful text-based assistant embedded in the RIFT network observability platform. The user says: "${payload.content}". Here is the current architecture context: \n${availableNodesString}\n\nRespond concisely and helpfully in 1-3 sentences. Never refer to yourself as JARVIS.`;
+        }
+
+        const response = await ai.models.generateContent({
+             model: 'gemini-2.5-flash',
+             contents: contentsData,
+        });
+        
+        return response.text || "No response generated.";
+    } catch(e) {
+        console.error("Gemini Chat API Error:", e);
+        if (e.message && (e.message.includes('429') || e.message.toLowerCase().includes('quota'))) {
+            return "My voice protocol is temporarily overloaded by API quota constraints. Please standby.";
+        }
+        return "Excuse me, I'm encountering a systemic communication error.";
     }
 }
 
@@ -91,6 +129,9 @@ export async function generateAgentResolution(nodeName, attackType) {
         });
         return response.text;
     } catch(e) {
+        if (e.message && (e.message.includes('429') || e.message.toLowerCase().includes('quota'))) {
+            return "DevSecOps Auto-Resolution suppressed: API Quota exhausted.";
+        }
         window.dispatchEvent(new Event('trigger-api-key-modal'));
         return "DevSecOps AI Generation failed. API Key error or infrastructure overload.";
     }

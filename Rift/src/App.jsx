@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import RiftMap from './RiftMap';
-import { parseIncidentPayload, generateAgentResolution } from './lib/gemini';
+import { parseIncidentPayload, generateAgentResolution, handleGeneralChat } from './lib/gemini';
 import { MarkerType, addEdge, applyNodeChanges, applyEdgeChanges } from 'reactflow';
 import { playAlertBeep, playSuccessChirp } from './lib/audio';
 import jsPDF from 'jspdf';
@@ -46,8 +46,17 @@ export default function App() {
   const [imagePayload, setImagePayload] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [theme, setTheme] = useState('light');
+
+  // === AEGIS Voice System State ===
   const [isListening, setIsListening] = useState(false);
-  const [aiChatLogs, setAiChatLogs] = useState([{ speaker: 'Gemini', text: "RIFT Voice Architecture Online. I am listening directly to your binary audio. What are your orders, commander?" }]);
+  const [voiceStatus, setVoiceStatus] = useState('idle'); // idle | listening | processing | speaking
+  const [conversationActive, setConversationActive] = useState(false);
+
+  // === Text Chat Widget State ===
+  const [aiChatLogs, setAiChatLogs] = useState([{ speaker: 'RIFT', text: "RIFT AI Assist ready. Ask anything about the platform, architecture, or threat analysis." }]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInputText, setChatInputText] = useState("");
+  const chatEndRef = useRef(null);
   
   // New features state
   const [isChaosMode, setIsChaosMode] = useState(false);
@@ -59,6 +68,12 @@ export default function App() {
   const reactFlowWrapper = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const vadIntervalRef = useRef(null);
+  const silenceTimerRef = useRef(null);
+  const isSpeakingRef = useRef(false); // tracks if user voice detected
 
   const addLog = useCallback((msg, type = '') => {
     setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), msg, type }]);
@@ -218,17 +233,50 @@ export default function App() {
       doc.save(`RIFT-Incident-${patch.node}-${Date.now()}.pdf`);
   };
 
-  const handleVoiceCommand = async () => {
-      if (isListening) {
-          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-              mediaRecorderRef.current.stop();
-          }
-          setIsListening(false);
-          return;
-      }
+  // ══════════════════════════════════════════════════
+  // AEGIS — Continuous Conversation Voice System
+  // Uses Voice Activity Detection (VAD) for hands-free
+  // ══════════════════════════════════════════════════
 
+  const aegisCleanup = () => {
+      if (vadIntervalRef.current) clearInterval(vadIntervalRef.current);
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          try { mediaRecorderRef.current.stop(); } catch(e) {}
+      }
+      if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
+      }
+      if (audioContextRef.current) {
+          try { audioContextRef.current.close(); } catch(e) {}
+          audioContextRef.current = null;
+      }
+      window.speechSynthesis.cancel();
+      isSpeakingRef.current = false;
+  };
+
+  const startListeningCycle = async () => {
       try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Reuse existing stream or get new one
+          if (!streamRef.current || !streamRef.current.active) {
+              streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+          }
+          const stream = streamRef.current;
+
+          // Set up AudioContext + Analyser for VAD
+          if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+              audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          const audioCtx = audioContextRef.current;
+          const source = audioCtx.createMediaStreamSource(stream);
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 512;
+          analyser.smoothingTimeConstant = 0.3;
+          source.connect(analyser);
+          analyserRef.current = analyser;
+
+          // Start MediaRecorder
           const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
           mediaRecorderRef.current = mediaRecorder;
           audioChunksRef.current = [];
@@ -238,24 +286,153 @@ export default function App() {
           };
 
           mediaRecorder.onstop = () => {
+              // Only process if we actually detected speech
+              if (!isSpeakingRef.current && audioChunksRef.current.length < 2) {
+                  // No real speech detected — restart listening
+                  if (conversationActive) setTimeout(() => startListeningCycle(), 200);
+                  return;
+              }
+              isSpeakingRef.current = false;
+              setVoiceStatus('processing');
+              setIsListening(false);
+
               const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
               const reader = new FileReader();
               reader.readAsDataURL(audioBlob);
-              reader.onloadend = () => {
+              reader.onloadend = async () => {
                   const base64Audio = reader.result.split(',')[1];
-                  const explicitPayload = { type: 'audio', mimeType: 'audio/webm', content: base64Audio };
-                  // Free microphone stream tracks
-                  stream.getTracks().forEach(track => track.stop());
-                  handleIngest(null, explicitPayload);
+                  const payload = { type: 'audio', mimeType: 'audio/webm', content: base64Audio };
+                  const responseText = await handleGeneralChat(payload, nodes);
+                  addLog(`[AEGIS] ${responseText}`, 'ai');
+                  
+                  setVoiceStatus('speaking');
+                  speakResponse(responseText, () => {
+                      // After speaking, auto-resume listening if conversation still active
+                      setVoiceStatus('listening');
+                      setIsListening(true);
+                      startListeningCycle();
+                  });
               };
           };
 
-          mediaRecorder.start();
+          mediaRecorder.start(250); // timeslice for chunks
           setIsListening(true);
-          addLog('[SYS] Listening to native audio. Speak threat vector, then tap mic again to transmit...', 'ai');
+          setVoiceStatus('listening');
+
+          // Voice Activity Detection loop
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          const SPEECH_THRESHOLD = 30; // Volume level to detect speech
+          const SILENCE_DURATION = 1500; // ms of silence before auto-transmit
+
+          if (vadIntervalRef.current) clearInterval(vadIntervalRef.current);
+
+          vadIntervalRef.current = setInterval(() => {
+              if (!analyserRef.current) return;
+              analyserRef.current.getByteFrequencyData(dataArray);
+              const avgVolume = dataArray.reduce((sum, v) => sum + v, 0) / dataArray.length;
+
+              if (avgVolume > SPEECH_THRESHOLD) {
+                  // User is speaking
+                  isSpeakingRef.current = true;
+                  if (silenceTimerRef.current) {
+                      clearTimeout(silenceTimerRef.current);
+                      silenceTimerRef.current = null;
+                  }
+
+                  // If AEGIS was speaking, interrupt it
+                  if (window.speechSynthesis.speaking) {
+                      window.speechSynthesis.cancel();
+                  }
+              } else if (isSpeakingRef.current && !silenceTimerRef.current) {
+                  // User stopped speaking — start silence timer
+                  silenceTimerRef.current = setTimeout(() => {
+                      // Silence confirmed — stop recording, auto-transmit
+                      if (vadIntervalRef.current) clearInterval(vadIntervalRef.current);
+                      silenceTimerRef.current = null;
+                      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                          mediaRecorderRef.current.stop();
+                      }
+                  }, SILENCE_DURATION);
+              }
+          }, 100);
+
       } catch (err) {
-          addLog('[WARN] Error accessing microphone for native audio.', 'warn');
+          addLog('[WARN] Microphone access denied.', 'warn');
           setIsListening(false);
+          setVoiceStatus('idle');
+          setConversationActive(false);
+      }
+  };
+
+  const toggleConversation = () => {
+      if (conversationActive) {
+          // Shut down conversation
+          setConversationActive(false);
+          aegisCleanup();
+          setIsListening(false);
+          setVoiceStatus('idle');
+      } else {
+          // Start conversation
+          setConversationActive(true);
+          startListeningCycle();
+      }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+      return () => aegisCleanup();
+  }, []);
+
+  // Sync conversationActive with cleanup
+  useEffect(() => {
+      if (!conversationActive) {
+          aegisCleanup();
+          setIsListening(false);
+          setVoiceStatus('idle');
+      }
+  }, [conversationActive]);
+
+  const speakResponse = (text, onEndCallback) => {
+      if (!window.speechSynthesis) { onEndCallback?.(); return; }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.pitch = 0.85;
+      utterance.rate = 1.0;
+      
+      const voices = window.speechSynthesis.getVoices();
+      const selectedVoice = voices.find(v => v.lang.includes('en-GB')) || voices.find(v => v.lang.includes('en'));
+      if (selectedVoice) utterance.voice = selectedVoice;
+      utterance.onend = () => onEndCallback?.();
+      
+      window.speechSynthesis.speak(utterance);
+  };
+
+  // ══════════════════════════════════════════════════
+  // Text Chat Widget — Separate from Voice
+  // ══════════════════════════════════════════════════
+  const processChatPayload = async (payload) => {
+      setAiChatLogs(prev => [...prev, { speaker: 'User', text: payload.content }]);
+      setIsChatOpen(true);
+      setAiChatLogs(prev => [...prev, { speaker: 'RIFT', text: '...' }]);
+      if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+
+      const responseText = await handleGeneralChat(payload, nodes);
+      setAiChatLogs(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { speaker: 'RIFT', text: responseText };
+          return updated;
+      });
+
+      setTimeout(() => {
+          if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+  };
+
+  const handleChatTextSubmit = (e) => {
+      if (e.key === 'Enter' && chatInputText.trim()) {
+          const payload = { type: 'text', content: chatInputText.trim() };
+          setChatInputText("");
+          processChatPayload(payload);
       }
   };
 
@@ -315,11 +492,6 @@ export default function App() {
      let analysis;
      try {
          analysis = await parseIncidentPayload(payloadObj, nodes);
-         if (analysis.chat_response) {
-            setAiChatLogs(prev => [...prev, { speaker: 'User', text: explicitPayload?.type === 'audio' ? '[ Audio Recording Transmitted ]' : (autoText || ingestText || '[ Image Analyzed ]') }]);
-            setAiChatLogs(prev => [...prev, { speaker: 'Gemini', text: analysis.chat_response }]);
-            setActiveTab('chat');
-         }
      } catch(e) {
          analysis = { target: nodes[0]?.id || 'lb-1', type: 'Unclassified Error' };
      }
@@ -438,7 +610,6 @@ export default function App() {
          </div>
          <div className="tabs">
             <button className={activeTab === 'topology' ? 'active' : ''} onClick={() => setActiveTab('topology')}>Architecture</button>
-            <button className={activeTab === 'chat' ? 'active' : ''} onClick={() => setActiveTab('chat')}>AI Comm-Link</button>
             <button className={activeTab === 'logs' ? 'active' : ''} onClick={() => setActiveTab('logs')}>Threat Logs ({logs.length})</button>
             <button className={activeTab === 'patches' ? 'active' : ''} onClick={() => setActiveTab('patches')}>Resolution Registry ({patches.length})</button>
          </div>
@@ -470,14 +641,6 @@ export default function App() {
                               + ATTACH IMAGE / LOG
                               <input type="file" accept=".txt,.log,.json,image/*" onChange={handleFileUpload} disabled={isProcessing || vcrIndex !== -1 || isChaosMode} />
                            </label>
-                           <button 
-                             onClick={handleVoiceCommand} 
-                             className="file-upload-btn" 
-                             style={{ margin: 0, padding: '4px 12px', background: isListening ? 'var(--accent-red)' : 'transparent', color: isListening ? '#fff' : 'var(--text-secondary)' }}
-                             disabled={isProcessing || vcrIndex !== -1 || isChaosMode}
-                             title="Voice Command">
-                             🎤
-                           </button>
                         </div>
                         {uploadedFileIndicator && <span className="attached-file">{uploadedFileIndicator}</span>}
                      </div>
@@ -613,26 +776,125 @@ export default function App() {
                )}
            </div>
         )}
-
-        {activeTab === 'chat' && (
-           <div className="panel full-page glass-panel">
-              <h2>COMM-LINK SECURE CHANNEL</h2>
-              <div className="terminal-window" style={{ overflowY: 'auto', maxHeight: '70vh' }}>
-                 <div className="terminal-content">
-                    {aiChatLogs.map((msg, i) => (
-                       <div key={i} style={{ marginBottom: '1.2rem', padding: '1rem', background: 'rgba(0,0,0,0.15)', borderRadius: '4px', borderLeft: `3px solid ${msg.speaker === 'User' ? 'var(--accent-blue)' : 'var(--accent-green)'}` }}>
-                          <strong style={{ display: 'block', marginBottom: '0.4rem', color: msg.speaker === 'User' ? 'var(--accent-blue)' : 'var(--accent-green)', fontSize: '0.85rem', letterSpacing: '1px' }}>
-                             {msg.speaker.toUpperCase()}
-                          </strong> 
-                          <span style={{ color: 'var(--text-primary)', lineHeight: '1.5' }}>{msg.text}</span>
-                       </div>
-                    ))}
-                    <div ref={logsEndRef} />
-                 </div>
-              </div>
-           </div>
-        )}
       </div>
+
+      {/* ══════════════════════════════════════════════════ */}
+      {/* AEGIS — Voice Command Orb (Bottom-Left)          */}
+      {/* ══════════════════════════════════════════════════ */}
+      <div className="aegis-voice-orb" onClick={toggleConversation} style={{
+          position: 'fixed', bottom: '28px', left: '28px', zIndex: 9999, cursor: 'pointer'
+      }}>
+          {/* Dynamic Pulse Rings */}
+          {voiceStatus === 'listening' && <>
+              <span className="aegis-ring aegis-ring-1" />
+              <span className="aegis-ring aegis-ring-2" />
+              <span className="aegis-ring aegis-ring-3" />
+          </>}
+          {voiceStatus === 'processing' && <span className="aegis-ring aegis-ring-processing" />}
+          {voiceStatus === 'speaking' && <>
+              <span className="aegis-ring aegis-ring-speaking-1" />
+              <span className="aegis-ring aegis-ring-speaking-2" />
+          </>}
+
+          <div className={`aegis-core ${voiceStatus}`} style={{
+              width: '56px', height: '56px', borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
+              position: 'relative', zIndex: 2,
+              background: voiceStatus === 'listening' ? 'linear-gradient(135deg, #ef4444, #f97316)' 
+                        : voiceStatus === 'processing' ? 'linear-gradient(135deg, #f59e0b, #eab308)' 
+                        : voiceStatus === 'speaking' ? 'linear-gradient(135deg, #22c55e, #10b981)' 
+                        : conversationActive ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' 
+                        : 'linear-gradient(135deg, var(--accent-blue), #6366f1)',
+              boxShadow: voiceStatus === 'listening' ? '0 0 30px rgba(239,68,68,0.5)' 
+                        : voiceStatus === 'speaking' ? '0 0 30px rgba(34,197,94,0.5)' 
+                        : conversationActive ? '0 0 20px rgba(99,102,241,0.4)' 
+                        : '0 8px 24px rgba(0,0,0,0.3)',
+              transition: 'all 0.3s ease'
+          }}>
+              <span style={{ fontSize: '20px', lineHeight: 1, color: '#fff' }}>{
+                  voiceStatus === 'listening' ? '◉' 
+                  : voiceStatus === 'processing' ? '⟳' 
+                  : voiceStatus === 'speaking' ? '◈' 
+                  : conversationActive ? '◎' 
+                  : '⎔'
+              }</span>
+          </div>
+
+          <div style={{
+              position: 'absolute', bottom: '-22px', left: '50%', transform: 'translateX(-50%)',
+              fontSize: '9px', fontWeight: 700, letterSpacing: '2px', color: 'var(--text-secondary)',
+              whiteSpace: 'nowrap', textTransform: 'uppercase'
+          }}>
+              {voiceStatus === 'idle' && !conversationActive ? 'AEGIS' 
+               : voiceStatus === 'listening' ? 'LISTENING...' 
+               : voiceStatus === 'processing' ? 'THINKING...' 
+               : voiceStatus === 'speaking' ? 'SPEAKING...' 
+               : 'TAP TO END'}
+          </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════ */}
+      {/* Text Chat Widget (Bottom-Right)                  */}
+      {/* ══════════════════════════════════════════════════ */}
+      <div className={`floating-chat-widget glass-panel ${isChatOpen ? 'open' : 'closed'}`} style={{
+          position: 'fixed', bottom: isChatOpen ? '20px' : '-420px', right: '20px', width: '360px', height: '420px',
+          zIndex: 9998, transition: 'bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+          display: 'flex', flexDirection: 'column',
+          border: '1px solid var(--border-color)', borderRadius: '12px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.4)', overflow: 'hidden'
+      }}>
+          <div style={{
+              padding: '12px 16px', background: 'rgba(0,0,0,0.35)', borderBottom: '1px solid var(--border-color)',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer'
+          }} onClick={() => setIsChatOpen(false)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-green)', display: 'inline-block' }} />
+                  <strong style={{ fontSize: '12px', color: 'var(--text-primary)', letterSpacing: '1.5px' }}>RIFT AI ASSIST</strong>
+              </div>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>✕</span>
+          </div>
+          
+          <div style={{ flex: 1, padding: '14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {aiChatLogs.map((msg, i) => (
+                  <div key={i} style={{ 
+                      alignSelf: msg.speaker === 'User' ? 'flex-end' : 'flex-start',
+                      background: msg.speaker === 'User' ? 'var(--accent-blue)' : 'rgba(0,0,0,0.25)',
+                      color: msg.speaker === 'User' ? '#fff' : 'var(--text-primary)',
+                      padding: '9px 13px', borderRadius: msg.speaker === 'User' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                      maxWidth: '82%', fontSize: '12.5px', lineHeight: '1.55'
+                  }}>
+                      {msg.text}
+                  </div>
+              ))}
+              <div ref={chatEndRef} />
+          </div>
+
+          <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.15)' }}>
+              <input 
+                  type="text" 
+                  value={chatInputText}
+                  onChange={(e) => setChatInputText(e.target.value)}
+                  onKeyDown={handleChatTextSubmit}
+                  placeholder="Ask RIFT anything..."
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '9px 14px', borderRadius: '100px', outline: 'none', fontSize: '12.5px' }}
+              />
+          </div>
+      </div>
+
+      {!isChatOpen && (
+          <button 
+             className="glass-panel chat-fab"
+             onClick={() => setIsChatOpen(true)}
+             style={{
+                 position: 'fixed', bottom: '22px', right: '22px', zIndex: 9998,
+                 width: '50px', height: '50px', borderRadius: '50%', border: '1px solid var(--border-color)',
+                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer',
+                 boxShadow: '0 8px 20px rgba(0,0,0,0.25)'
+             }}>
+             💬
+          </button>
+      )}
+
     </div>
   );
 }
